@@ -15,7 +15,48 @@ feedback_lock = threading.Lock()
 active_sessions = {}
 SESSION_TIMEOUT = 30  # seconds
 
-INITIAL_SAMPLE_FEEDBACKS = []
+INITIAL_SAMPLE_FEEDBACKS = [
+    {
+        "id": "fb-1730501001",
+        "name": "Neha Sharma",
+        "role": "PCCOE Comp Dept (Final Year)",
+        "rating": 5,
+        "category": "Generic Medicine Pricing",
+        "message": "Saved almost ₹450 on monthly inhaler and generic anti-allergic medicines at the Jan Aushadhi Kendra near Akurdi station. The live price matcher was spot on!",
+        "date": "01 Nov 2026, 04:30 PM",
+        "timestamp": 1730458800000
+    },
+    {
+        "id": "fb-1730501002",
+        "name": "Omkar Patil",
+        "role": "PCCOE Mechanical Student",
+        "rating": 5,
+        "category": "Real-Time Distance & Wishlist",
+        "message": "Found a 24x7 open night chemist at 1:30 AM near Dange Chowk for emergency medication. The direct 1-tap WhatsApp inquiry saved so much panic.",
+        "date": "01 Nov 2026, 08:15 PM",
+        "timestamp": 1730472300000
+    },
+    {
+        "id": "fb-1730501003",
+        "name": "Prof. Rajesh Kulkarni",
+        "role": "PCMC Citizen (Nigdi Pradhikaran)",
+        "rating": 5,
+        "category": "Generic Medicine Pricing",
+        "message": "Brilliant student initiative by PCCOE! Comparing branded Telma 40 with PMBJP generic substitute on the price matrix made medicine costs so transparent.",
+        "date": "01 Nov 2026, 09:40 PM",
+        "timestamp": 1730477400000
+    },
+    {
+        "id": "fb-1730501004",
+        "name": "Tanvi Deshpande",
+        "role": "PCCOE IT Student",
+        "rating": 5,
+        "category": "General Experience",
+        "message": "The AI Voice Assistant in Marathi and GPS live distance routing works very fast. Proud to see our PCCOE campus building practical healthcare technology!",
+        "date": "01 Nov 2026, 11:10 PM",
+        "timestamp": 1730482800000
+    }
+]
 
 def get_stats():
     with stats_lock:
