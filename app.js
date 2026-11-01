@@ -3867,10 +3867,11 @@ function filterPublicFeedbacks(filterVal) {
 }
 
 /**
- * Render Reviews Board visible to all users
+ * Render Reviews Board visible to all users (both in Modal and on Homepage Board)
  */
 function renderPublicFeedbackList() {
     const listEl = document.getElementById('publicFeedbackList');
+    const homeListEl = document.getElementById('homeFeedbackList');
     const feedbacks = getStoredFeedbacks();
     updateAllFeedbackBadges();
 
@@ -3879,37 +3880,50 @@ function renderPublicFeedbackList() {
     const totalReviewsTextEl = document.getElementById('publicTotalReviewsText');
     const satisfactionLabelEl = document.getElementById('publicSatisfactionLabel');
 
+    const homeAvgScoreEl = document.getElementById('homeAverageScore');
+    const homeAvgStarsEl = document.getElementById('homeAverageStars');
+    const homeTotalReviewsEl = document.getElementById('homeTotalReviewsText');
+    const homeSatisfactionLabelEl = document.getElementById('homeSatisfactionLabel');
+
     // 1. Calculate Real-Time Dynamic Rating Score
     if (feedbacks.length === 0) {
         if (avgScoreEl) avgScoreEl.innerText = '—';
         if (avgStarsEl) avgStarsEl.innerHTML = '<i class="far fa-star"></i><i class="far fa-star"></i><i class="far fa-star"></i><i class="far fa-star"></i><i class="far fa-star"></i>';
         if (totalReviewsTextEl) totalReviewsTextEl.innerText = '0 Submissions';
         if (satisfactionLabelEl) satisfactionLabelEl.innerText = 'No ratings yet';
+
+        if (homeAvgScoreEl) homeAvgScoreEl.innerText = '—';
+        if (homeAvgStarsEl) homeAvgStarsEl.innerHTML = '<i class="far fa-star"></i><i class="far fa-star"></i><i class="far fa-star"></i><i class="far fa-star"></i><i class="far fa-star"></i>';
+        if (homeTotalReviewsEl) homeTotalReviewsEl.innerText = '0 Submissions';
+        if (homeSatisfactionLabelEl) homeSatisfactionLabelEl.innerText = 'Every submitted feedback is visible to all visitors.';
     } else {
         const sum = feedbacks.reduce((acc, curr) => acc + (Number(curr.rating) || 5), 0);
         const avgRating = sum / feedbacks.length;
-        if (avgScoreEl) avgScoreEl.innerText = avgRating.toFixed(1);
-        if (avgStarsEl) {
-            let starsHtml = '';
-            const rounded = Math.round(avgRating);
-            for (let i = 1; i <= 5; i++) {
-                if (i <= rounded) {
-                    starsHtml += '<i class="fas fa-star"></i>';
-                } else {
-                    starsHtml += '<i class="far fa-star"></i>';
-                }
-            }
-            avgStarsEl.innerHTML = starsHtml;
-        }
-        if (totalReviewsTextEl) {
-            totalReviewsTextEl.innerText = `${feedbacks.length} Verified ${feedbacks.length === 1 ? 'Submission' : 'Submissions'}`;
-        }
-        if (satisfactionLabelEl) {
-            satisfactionLabelEl.innerText = `Based on ${feedbacks.length} community ${feedbacks.length === 1 ? 'review' : 'reviews'}`;
-        }
-    }
+        const avgScoreStr = avgRating.toFixed(1);
 
-    if (!listEl) return;
+        if (avgScoreEl) avgScoreEl.innerText = avgScoreStr;
+        if (homeAvgScoreEl) homeAvgScoreEl.innerText = avgScoreStr;
+
+        let starsHtml = '';
+        const rounded = Math.round(avgRating);
+        for (let i = 1; i <= 5; i++) {
+            if (i <= rounded) {
+                starsHtml += '<i class="fas fa-star"></i>';
+            } else {
+                starsHtml += '<i class="far fa-star"></i>';
+            }
+        }
+        if (avgStarsEl) avgStarsEl.innerHTML = starsHtml;
+        if (homeAvgStarsEl) homeAvgStarsEl.innerHTML = starsHtml;
+
+        const countText = `${feedbacks.length} Verified ${feedbacks.length === 1 ? 'Submission' : 'Submissions'}`;
+        if (totalReviewsTextEl) totalReviewsTextEl.innerText = countText;
+        if (homeTotalReviewsEl) homeTotalReviewsEl.innerText = countText;
+
+        const satisfactionText = `Based on ${feedbacks.length} community ${feedbacks.length === 1 ? 'review' : 'reviews'} • 100% Public`;
+        if (satisfactionLabelEl) satisfactionLabelEl.innerText = satisfactionText;
+        if (homeSatisfactionLabelEl) homeSatisfactionLabelEl.innerText = satisfactionText;
+    }
 
     // 2. Filter reviews by selected category/star
     let displayList = [...feedbacks];
@@ -3922,25 +3936,36 @@ function renderPublicFeedbackList() {
     }
 
     if (displayList.length === 0) {
-        if (feedbacks.length === 0) {
-            listEl.innerHTML = `
-                <div style="text-align:center; padding:44px 16px; background:#f8fafc; border-radius:12px; border:1px dashed #cbd5e1; color:#64748b;">
-                    <i class="fas fa-comments" style="font-size:2.4rem; margin-bottom:12px; color:#0d9488;"></i>
-                    <p style="margin:0; font-weight:700; font-size:1.05rem; color:#0f172a;">No feedback received yet</p>
-                    <p style="font-size:0.84rem; margin:6px 0 16px; color:#64748b;">Be the first person from PCCOE or PCMC to send real-time feedback!</p>
-                    <button type="button" class="btn-primary" onclick="switchFeedbackTab('write')" style="background:#0d9488; border:none; padding:9px 18px; font-size:0.86rem; border-radius:8px;">
-                        <i class="fas fa-plus-circle"></i> Write First Feedback
-                    </button>
-                </div>
-            `;
-        } else {
-            listEl.innerHTML = `
-                <div style="text-align:center; padding:36px 16px; background:#f8fafc; border-radius:12px; border:1px dashed #cbd5e1; color:#64748b;">
-                    <i class="fas fa-comment-dots" style="font-size:2rem; margin-bottom:10px; color:#0d9488;"></i>
-                    <p style="margin:0; font-weight:700; font-size:0.95rem; color:#0f172a;">No reviews found in this topic</p>
-                    <p style="font-size:0.82rem; margin:4px 0 12px; color:#64748b;">Try switching to "All Reviews" or post a review on this topic!</p>
-                    <button type="button" class="btn-primary" onclick="filterPublicFeedbacks('all')" style="background:#0d9488; border:none; padding:7px 14px; font-size:0.8rem; border-radius:6px;">
-                        Show All Reviews
+        const emptyModalHtml = feedbacks.length === 0 ? `
+            <div style="text-align:center; padding:44px 16px; background:#f8fafc; border-radius:12px; border:1px dashed #cbd5e1; color:#64748b;">
+                <i class="fas fa-comments" style="font-size:2.4rem; margin-bottom:12px; color:#0d9488;"></i>
+                <p style="margin:0; font-weight:700; font-size:1.05rem; color:#0f172a;">No feedback received yet</p>
+                <p style="font-size:0.84rem; margin:6px 0 16px; color:#64748b;">Be the first person from PCCOE or PCMC to send real-time feedback!</p>
+                <button type="button" class="btn-primary" onclick="switchFeedbackTab('write')" style="background:#0d9488; border:none; padding:9px 18px; font-size:0.86rem; border-radius:8px;">
+                    <i class="fas fa-plus-circle"></i> Write First Feedback
+                </button>
+            </div>
+        ` : `
+            <div style="text-align:center; padding:36px 16px; background:#f8fafc; border-radius:12px; border:1px dashed #cbd5e1; color:#64748b;">
+                <i class="fas fa-comment-dots" style="font-size:2rem; margin-bottom:10px; color:#0d9488;"></i>
+                <p style="margin:0; font-weight:700; font-size:0.95rem; color:#0f172a;">No reviews found in this topic</p>
+                <p style="font-size:0.82rem; margin:4px 0 12px; color:#64748b;">Try switching to "All Reviews" or post a review on this topic!</p>
+                <button type="button" class="btn-primary" onclick="filterPublicFeedbacks('all')" style="background:#0d9488; border:none; padding:7px 14px; font-size:0.8rem; border-radius:6px;">
+                    Show All Reviews
+                </button>
+            </div>
+        `;
+
+        if (listEl) listEl.innerHTML = emptyModalHtml;
+
+        if (homeListEl) {
+            homeListEl.innerHTML = `
+                <div style="grid-column: 1 / -1; text-align:center; padding:36px 16px; background:#f8fafc; border-radius:12px; border:1.5px dashed #cbd5e1; color:#64748b;">
+                    <i class="fas fa-comments" style="font-size:2.2rem; margin-bottom:10px; color:#0d9488;"></i>
+                    <p style="margin:0; font-weight:700; font-size:1.05rem; color:#0f172a;">No public reviews yet</p>
+                    <p style="font-size:0.84rem; margin:6px 0 14px; color:#64748b;">Be the first person to share honest feedback on MedNexa! Your review will appear here publicly.</p>
+                    <button type="button" class="btn-primary" onclick="openFeedbackModal('write')" style="background:#0d9488; border:none; padding:9px 18px; font-size:0.86rem; border-radius:8px;">
+                        <i class="fas fa-pen-to-square"></i> Give First Public Feedback
                     </button>
                 </div>
             `;
@@ -3948,7 +3973,7 @@ function renderPublicFeedbackList() {
         return;
     }
 
-    listEl.innerHTML = displayList.map(fb => {
+    const cardsHtml = displayList.map(fb => {
         const rating = Number(fb.rating) || 5;
         let starsHtml = '';
         for (let i = 1; i <= 5; i++) {
@@ -3984,13 +4009,16 @@ function renderPublicFeedbackList() {
                 <div class="card-feedback-footer">
                     <div style="display:flex; align-items:center; gap:8px;">
                         <span class="feedback-category-badge"><i class="fas fa-tag"></i> ${escapeHtml(fb.category || 'General Experience')}</span>
-                        <span class="feedback-verified-pill"><i class="fas fa-circle-check"></i> Verified Feedback</span>
+                        <span class="feedback-verified-pill" style="background:#ecfdf5; color:#047857; border:1px solid #a7f3d0;"><i class="fas fa-globe"></i> Public Review</span>
                     </div>
                     <span><i class="far fa-clock"></i> ${escapeHtml(fb.date)}</span>
                 </div>
             </div>
         `;
     }).join('');
+
+    if (listEl) listEl.innerHTML = cardsHtml;
+    if (homeListEl) homeListEl.innerHTML = cardsHtml;
 }
 
 async function handleFeedbackSubmit(event) {
