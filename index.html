@@ -32,7 +32,7 @@
     <meta http-equiv="Expires" content="0">
 
     <!-- App Styles -->
-    <link rel="stylesheet" href="styles.css?v=mednexa-20261102-v8">
+    <link rel="stylesheet" href="styles.css?v=mednexa-20261102-v9">
 </head>
 
 <body>
@@ -509,43 +509,6 @@
                         <option value="Pimple Saudagar">Pimple Saudagar &amp; Sangvi</option>
                     </select>
                 </div>
-            </div>
-        </section>
-
-        <!-- ============================================================ -->
-        <!-- REAL-TIME DYNAMIC LOCATION & MULTI-MODAL TRANSIT HUB -->
-        <!-- ============================================================ -->
-        <section class="realtime-transit-bar" id="realtimeTransitBar">
-            <div class="transit-bar-top">
-                <div class="transit-origin-indicator">
-                    <span class="live-gps-radar-dot"></span>
-                    <div class="transit-origin-info">
-                        <span class="origin-tag-label"><i class="fas fa-satellite-dish"></i> REAL-TIME DYNAMIC ORIGIN:</span>
-                        <strong id="liveOriginName">PCCOE Campus</strong>
-                        <span class="live-coords-chip" id="liveCoordsChip">18.6517° N, 73.7629° E</span>
-                    </div>
-                </div>
-                <div class="transit-actions">
-                    <button type="button" class="btn-transit-action" id="btnLiveDeviceGps" onclick="locateUser(true)">
-                        <i class="fas fa-crosshairs"></i> <span>My Real GPS</span>
-                    </button>
-                    <button type="button" class="btn-transit-action" id="btnSimulateMotion" onclick="toggleSimulateMovement()">
-                        <i class="fas fa-person-walking-arrow-right"></i> <span id="simulateMotionLabel">Simulate Live Motion</span>
-                    </button>
-                    <button type="button" class="btn-transit-action" id="btnPickOnMap" onclick="enableMapPickOrigin()">
-                        <i class="fas fa-map-pin"></i> <span>Pick On Map</span>
-                    </button>
-                </div>
-            </div>
-
-            <div class="transit-quick-locations">
-                <span class="quick-loc-label"><i class="fas fa-location-dot"></i> Switch Origin:</span>
-                <button type="button" class="origin-chip active" id="chip-pccoe" onclick="setOriginLocation('pccoe')"><i class="fas fa-graduation-cap"></i> PCCOE Campus</button>
-                <button type="button" class="origin-chip" id="chip-akurdi-stn" onclick="setOriginLocation('akurdi-stn')"><i class="fas fa-train"></i> Akurdi Stn</button>
-                <button type="button" class="origin-chip" id="chip-chinchwad-stn" onclick="setOriginLocation('chinchwad-stn')"><i class="fas fa-building"></i> Chinchwad Stn</button>
-                <button type="button" class="origin-chip" id="chip-hinjawadi" onclick="setOriginLocation('hinjawadi')"><i class="fas fa-laptop-code"></i> Hinjawadi Ph-1</button>
-                <button type="button" class="origin-chip" id="chip-wakad" onclick="setOriginLocation('wakad')"><i class="fas fa-road"></i> Wakad Chowk</button>
-                <button type="button" class="origin-chip" id="chip-nigdi" onclick="setOriginLocation('nigdi')"><i class="fas fa-tree"></i> Nigdi Sec-25</button>
             </div>
         </section>
 
@@ -2152,9 +2115,9 @@
     <script src="html5-qrcode.min.js"></script>
 
     <!-- App Data, QR Hub & Logic -->
-    <script src="data.js?v=mednexa-20261102-v8"></script>
-    <script src="qr-hub.js?v=mednexa-20261102-v8"></script>
-    <script src="app.js?v=mednexa-20261102-v8"></script>
+    <script src="data.js?v=mednexa-20261102-v9"></script>
+    <script src="qr-hub.js?v=mednexa-20261102-v9"></script>
+    <script src="app.js?v=mednexa-20261102-v9"></script>
 
 </body>
 
