@@ -853,18 +853,7 @@ function renderCards(stores) {
         const liveStatus = getStoreLiveStatus(store);
         const liveStatusBadge = `<span class="badge-live-status ${liveStatus.badgeClass}" title="${liveStatus.subtext}"><i class="fas ${liveStatus.icon}"></i> ${liveStatus.label}</span>`;
 
-        const travelHtml = `
-            <div class="travel-time-row" title="Real-time estimated transit from ${escapeHtml(userCoords ? userCoords.label : 'PCCOE Campus')}">
-                <span class="travel-chip walk-chip" title="Pedestrian Walking Time"><i class="fas fa-person-walking"></i> ${walkMins}m</span>
-                <span class="travel-chip bike-chip" title="Two-Wheeler / Bike Time"><i class="fas fa-motorcycle"></i> ${bikeMins}m</span>
-                <span class="travel-chip car-chip" title="Car / Cab Time"><i class="fas fa-car"></i> ${carMins}m</span>
-            </div>
-        `;
-
-        const distanceHtml = `<div style="text-align:right;">
-            <span class="distance-tag dynamic-live" title="Real-time road distance from ${escapeHtml(userCoords ? userCoords.label : 'PCCOE Campus')}"><i class="fas fa-location-arrow"></i> ${roadKm} km road</span>
-            ${travelHtml}
-        </div>`;
+        const distanceHtml = '';
 
         const savingsHtml = store.genericSavingsPct > 0
             ? `<div class="savings-alert">
@@ -1986,8 +1975,6 @@ function renderWishlistModal() {
                 </div>
 
                 <div style="font-size:0.82rem; color:#475569; margin-bottom:12px; display:flex; align-items:center; gap:8px;">
-                    <span><i class="fas fa-route" style="color:#6366f1;"></i> ${roadKm} km road</span>
-                    <span>•</span>
                     <span><i class="fas fa-clock" style="color:#10b981;"></i> ${store.timing || '8:00 AM - 11:00 PM'}</span>
                 </div>
 
@@ -3617,11 +3604,6 @@ function openAvailabilityModal(storeId) {
                             <i class="fas ${liveStatus.icon}"></i> ${liveStatus.label}
                         </span>
                         <span style="font-size:0.8rem; color:#475569; font-weight:600;">${liveStatus.subtext}</span>
-                    </div>
-                    <div style="font-size:0.75rem; color:#64748b; margin-top:4px;">
-                        <i class="fas fa-route" style="color:#0284c7;"></i> ${store.roadDistanceKm ? store.roadDistanceKm + ' km road' : 'Nearby'} • 
-                        <i class="fas fa-person-walking" style="color:#16a34a;"></i> ~${store.walkMins || 10}m walk • 
-                        <i class="fas fa-motorcycle" style="color:#0284c7;"></i> ~${store.bikeMins || 3}m bike
                     </div>
                 </div>
             </div>
