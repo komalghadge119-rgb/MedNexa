@@ -3824,12 +3824,10 @@ function getFeedbackApiEndpoints() {
     const urls = [];
     // 1. Live Global Cloud Database (syncs across all phones and devices worldwide!)
     urls.push(MEDNEXA_CLOUD_FEEDBACK_API + '?_t=' + Date.now());
-    // 2. Static repo file fallback (works 100% on GitHub Pages, Netlify, etc.)
-    urls.push('feedbacks.json');
-    // 3. Server API endpoints for local testing
+    // 2. Server API endpoints for local testing
     urls.push('/api/feedbacks');
     urls.push('/api/feedback');
-    // 4. Localhost server only if running locally or file:// (avoid Mixed Content on HTTPS)
+    // 3. Localhost server only if running locally or file:// (avoid Mixed Content on HTTPS)
     if (window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
         urls.push('http://localhost:8080/api/feedbacks');
         urls.push('http://127.0.0.1:8080/api/feedbacks');
@@ -3849,9 +3847,8 @@ async function syncFeedbacksFromBackend(showToastOnSuccess = false) {
     for (const url of endpoints) {
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 2000);
+            const timeoutId = setTimeout(() => controller.abort(), 8000);
             const res = await fetch(url, {
-                cache: 'no-store',
                 signal: controller.signal
             });
             clearTimeout(timeoutId);
@@ -3874,17 +3871,21 @@ async function syncFeedbacksFromBackend(showToastOnSuccess = false) {
         const cleanRemote = remoteFeedbacks.filter(fb => fb && fb.id && !LEGACY_SAMPLE_FEEDBACK_IDS.includes(fb.id));
         const local = getStoredFeedbacks();
 
-        // If cloud returned empty but we have real local submissions, trust local (CDN may be caching stale empty)
-        if (cleanRemote.length === 0 && local.length > 0) {
-            if (statusEl) {
-                statusEl.innerHTML = '<i class="fas fa-database" style="color:#64748b;"></i> <span style="color:#64748b;">Connected (' + local.length + ' reviews)</span>';
-            }
-            return local;
+        // Check if there are local user submissions not yet present in the cloud (auto-repair / sync up)
+        const unpushed = local.filter(l => l && l.id && !cleanRemote.some(r => r && r.id === l.id));
+        if (unpushed.length > 0) {
+            const combinedForCloud = [...unpushed, ...cleanRemote];
+            try {
+                fetch(MEDNEXA_CLOUD_FEEDBACK_API, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(combinedForCloud)
+                }).catch(() => {});
+            } catch (e) {}
         }
 
         const map = new Map();
         cleanRemote.forEach(fb => { if (fb && fb.id) map.set(fb.id, fb); });
-        // Preserve any newly submitted local feedback not yet synced to cloud
         local.forEach(fb => { if (fb && fb.id && !map.has(fb.id)) map.set(fb.id, fb); });
 
         const merged = Array.from(map.values());
@@ -4223,36 +4224,57 @@ async function handleFeedbackSubmit(event) {
     }
 
     // 3. Send to Global Cloud Database FIRST (blocking) so other phones see it immediately
+    let cloudWriteSuccess = false;
     try {
         if (submitBtn) {
             submitBtn.innerHTML = '<i class="fas fa-cloud-arrow-up fa-spin"></i> Publishing to cloud...';
         }
-        // GET current cloud list
+
+        // GET current cloud list with 8s timeout
         let currentList = [];
         try {
-            const getRes = await fetch(MEDNEXA_CLOUD_FEEDBACK_API + '?_t=' + Date.now(), { cache: 'no-store' });
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 8000);
+            const getRes = await fetch(MEDNEXA_CLOUD_FEEDBACK_API + '?_t=' + Date.now(), { signal: controller.signal });
+            clearTimeout(timeoutId);
             if (getRes.ok) {
                 const data = await getRes.json();
                 if (Array.isArray(data)) currentList = data;
             }
         } catch (e) {}
 
+        // Filter legacy test items
+        currentList = currentList.filter(f => f && f.id && !LEGACY_SAMPLE_FEEDBACK_IDS.includes(f.id));
+
         // Add new feedback to cloud list
         if (!currentList.some(f => f && f.id === newFeedback.id)) {
             currentList.unshift(newFeedback);
         }
 
-        // POST updated list to cloud
-        await fetch(MEDNEXA_CLOUD_FEEDBACK_API, {
+        // Attempt 1 to POST to cloud
+        let postRes = await fetch(MEDNEXA_CLOUD_FEEDBACK_API, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(currentList)
         });
 
-        // Cloud write succeeded — sync local storage from cloud so everyone sees same data
-        saveStoredFeedbacks(currentList.filter(fb => fb && fb.id && !LEGACY_SAMPLE_FEEDBACK_IDS.includes(fb.id)));
+        // Retry once if not ok
+        if (!postRes.ok) {
+            postRes = await fetch(MEDNEXA_CLOUD_FEEDBACK_API, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(currentList)
+            });
+        }
+
+        if (postRes.ok) {
+            cloudWriteSuccess = true;
+            saveStoredFeedbacks(currentList);
+        } else {
+            throw new Error('Cloud response status: ' + postRes.status);
+        }
     } catch (cloudErr) {
-        console.warn('Cloud sync notice:', cloudErr);
+        console.warn('Cloud sync note:', cloudErr);
         // Fallback: keep local copy so at least this user sees it
         const feedbacks = getStoredFeedbacks();
         if (!feedbacks.some(f => f && f.id === newFeedback.id)) {
@@ -4272,9 +4294,14 @@ async function handleFeedbackSubmit(event) {
     updateAllFeedbackBadges();
     renderPublicFeedbackList();
 
-    // Automatically switch to the Reviews tab so the user sees their feedback published live in real time!
+    // Automatically switch to the Reviews tab
     switchFeedbackTab('reviews');
-    showToast("🎉 Your review is now LIVE for everyone on all devices!", "success");
+
+    if (cloudWriteSuccess) {
+        showToast("🎉 Your review is now LIVE for everyone on all devices!", "success");
+    } else {
+        showToast("Review submitted locally. Syncing with other phones in background...", "info");
+    }
 
     const feedEl = document.getElementById('publicFeedbackList');
     if (feedEl) feedEl.scrollTop = 0;
