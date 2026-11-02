@@ -305,9 +305,8 @@ function updateMapMarkers(pharmacyList) {
 // ==========================================================================
 
 const PRESET_ORIGINS = {
-    'pccoe': { lat: 18.6517, lng: 73.7629, label: 'PCCOE Campus Gate', tag: 'PCCOE Campus' },
+    'pccoe': { lat: 18.6517, lng: 73.7629, label: 'PCCOE Campus', tag: 'PCCOE Campus' },
     'akurdi-stn': { lat: 18.6475, lng: 73.7712, label: 'Akurdi Railway Station', tag: 'Akurdi Stn' },
-    'dypatil': { lat: 18.6508, lng: 73.7645, label: 'PCCOE Akurdi Campus', tag: 'PCCOE Akurdi' },
     'chinchwad-stn': { lat: 18.6298, lng: 73.7820, label: 'Chinchwad Railway Station', tag: 'Chinchwad Stn' },
     'hinjawadi': { lat: 18.5913, lng: 73.7389, label: 'Hinjawadi Phase-1 IT Park', tag: 'Hinjawadi Ph-1' },
     'wakad': { lat: 18.5987, lng: 73.7635, label: 'Wakad Dange Chowk', tag: 'Wakad Chowk' },
@@ -323,7 +322,7 @@ let routeLayer = null;
 let simulationInterval = null;
 let simulationStep = 0;
 const SIMULATION_COORDS = [
-    { lat: 18.6517, lng: 73.7629, label: 'PCCOE Main Gate (Starting Point)' },
+    { lat: 18.6517, lng: 73.7629, label: 'PCCOE Campus (Starting Point)' },
     { lat: 18.6508, lng: 73.7648, label: 'Sector 26 Main Road (Walking)' },
     { lat: 18.6496, lng: 73.7672, label: 'Near Akurdi Post Office' },
     { lat: 18.6482, lng: 73.7695, label: 'Akurdi Flyover Approach' },
@@ -348,7 +347,7 @@ function calculateDistanceKm(lat1, lon1, lat2, lon2) {
 
 function recalculateAllStoreMetrics() {
     if (!userCoords) {
-        userCoords = { lat: 18.6517, lng: 73.7629, label: 'PCCOE Campus Gate', isLiveGps: false };
+        userCoords = { lat: 18.6517, lng: 73.7629, label: 'PCCOE Campus', isLiveGps: false };
     }
 
     allPharmacies.forEach(store => {
@@ -374,9 +373,9 @@ function recalculateAllStoreMetrics() {
 
 function initRealtimeLocationEngine() {
     // Set default PCCOE Campus reference immediately so all 121 stores have unique dynamic distances right on load
-    userCoords = { lat: 18.6517, lng: 73.7629, label: 'PCCOE Campus Gate', isLiveGps: false };
+    userCoords = { lat: 18.6517, lng: 73.7629, label: 'PCCOE Campus', isLiveGps: false };
     recalculateAllStoreMetrics();
-    updateLiveOriginDisplay('PCCOE Campus Gate', userCoords.lat, userCoords.lng, false);
+    updateLiveOriginDisplay('PCCOE Campus', userCoords.lat, userCoords.lng, false);
 
     // Attempt automatic real-time device geolocation smoothly
     if (navigator.geolocation) {
@@ -628,7 +627,7 @@ function drawLiveRouteToStore(storeId) {
     if (!store || !map) return;
 
     if (!userCoords) {
-        userCoords = { lat: 18.6517, lng: 73.7629, label: 'PCCOE Campus Gate' };
+        userCoords = { lat: 18.6517, lng: 73.7629, label: 'PCCOE Campus' };
         recalculateAllStoreMetrics();
     }
 
