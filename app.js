@@ -3770,48 +3770,7 @@ function printPatientSavingsSlip() {
 // USER FEEDBACK & SUGGESTIONS MODULE (LIVE REAL-TIME SYNC & PERSISTENCE)
 // ============================================================
 const MEDIFINDER_FEEDBACKS_KEY = 'medifinder_feedbacks_v3';
-const INITIAL_SAMPLE_FEEDBACKS = [
-    {
-        id: "fb-1730501001",
-        name: "Neha Sharma",
-        role: "PCCOE Comp Dept (Final Year)",
-        rating: 5,
-        category: "Generic Medicine Pricing",
-        message: "Saved almost ₹450 on monthly inhaler and generic anti-allergic medicines at the Jan Aushadhi Kendra near Akurdi station. The live price matcher was spot on!",
-        date: "01 Nov 2026, 04:30 PM",
-        timestamp: 1730458800000
-    },
-    {
-        id: "fb-1730501002",
-        name: "Omkar Patil",
-        role: "PCCOE Mechanical Student",
-        rating: 5,
-        category: "Real-Time Distance & Wishlist",
-        message: "Found a 24x7 open night chemist at 1:30 AM near Dange Chowk for emergency medication. The direct 1-tap WhatsApp inquiry saved so much panic.",
-        date: "01 Nov 2026, 08:15 PM",
-        timestamp: 1730472300000
-    },
-    {
-        id: "fb-1730501003",
-        name: "Prof. Rajesh Kulkarni",
-        role: "PCMC Citizen (Nigdi Pradhikaran)",
-        rating: 5,
-        category: "Generic Medicine Pricing",
-        message: "Brilliant student initiative by PCCOE! Comparing branded Telma 40 with PMBJP generic substitute on the price matrix made medicine costs so transparent.",
-        date: "01 Nov 2026, 09:40 PM",
-        timestamp: 1730477400000
-    },
-    {
-        id: "fb-1730501004",
-        name: "Tanvi Deshpande",
-        role: "PCCOE IT Student",
-        rating: 5,
-        category: "General Experience",
-        message: "The AI Voice Assistant in Marathi and GPS live distance routing works very fast. Proud to see our PCCOE campus building practical healthcare technology!",
-        date: "01 Nov 2026, 11:10 PM",
-        timestamp: 1730482800000
-    }
-];
+const INITIAL_SAMPLE_FEEDBACKS = [];
 
 let selectedFeedbackRating = 5;
 let feedbackBroadcast = null;
@@ -3832,20 +3791,21 @@ try {
     };
 } catch (e) {}
 
+const LEGACY_SAMPLE_FEEDBACK_IDS = ['fb-1730501001', 'fb-1730501002', 'fb-1730501003', 'fb-1730501004', 'fb-101', 'fb-102', 'fb-103'];
+
 function getStoredFeedbacks() {
     try {
         const raw = localStorage.getItem(MEDIFINDER_FEEDBACKS_KEY);
         if (raw) {
             const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-                return parsed;
+            if (Array.isArray(parsed)) {
+                const clean = parsed.filter(f => f && f.id && !LEGACY_SAMPLE_FEEDBACK_IDS.includes(f.id));
+                return clean;
             }
         }
-        // Fallback to verified starter feedbacks
-        saveStoredFeedbacks(INITIAL_SAMPLE_FEEDBACKS);
-        return [...INITIAL_SAMPLE_FEEDBACKS];
+        return [];
     } catch (e) {
-        return [...INITIAL_SAMPLE_FEEDBACKS];
+        return [];
     }
 }
 
@@ -3910,10 +3870,11 @@ async function syncFeedbacksFromBackend(showToastOnSuccess = false) {
         }
     }
 
-    if (remoteFeedbacks !== null && Array.isArray(remoteFeedbacks) && remoteFeedbacks.length > 0) {
+    if (remoteFeedbacks !== null && Array.isArray(remoteFeedbacks)) {
+        const cleanRemote = remoteFeedbacks.filter(fb => fb && fb.id && !LEGACY_SAMPLE_FEEDBACK_IDS.includes(fb.id));
         const local = getStoredFeedbacks();
         const map = new Map();
-        remoteFeedbacks.forEach(fb => { if (fb && fb.id) map.set(fb.id, fb); });
+        cleanRemote.forEach(fb => { if (fb && fb.id) map.set(fb.id, fb); });
         // Preserve any newly submitted local feedback not yet on server
         local.forEach(fb => { if (fb && fb.id && !map.has(fb.id)) map.set(fb.id, fb); });
 
