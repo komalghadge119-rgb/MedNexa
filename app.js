@@ -58,6 +58,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof syncFeedbacksFromBackend === 'function') {
         syncFeedbacksFromBackend();
     }
+    if (typeof syncStoresFromCloud === 'function') {
+        syncStoresFromCloud();
+    }
     initVoiceAssistant();
     applyFilters();
 });
@@ -1608,6 +1611,29 @@ function setupEventListeners() {
             savePendingSubmissions(pending);
             updateAdminPendingBadges();
 
+            // Sync to Global Cloud Stores Database so Admin can review and approve from any device!
+            (async () => {
+                try {
+                    const res = await fetch(MEDNEXA_CLOUD_STORES_API + '?_t=' + Date.now(), { cache: 'no-store' });
+                    let cloudData = { pendingSubmissions: [], approvedStores: [] };
+                    if (res.ok) {
+                        const parsed = await res.json();
+                        if (parsed && typeof parsed === 'object') cloudData = parsed;
+                    }
+                    if (!Array.isArray(cloudData.pendingSubmissions)) cloudData.pendingSubmissions = [];
+                    if (!cloudData.pendingSubmissions.some(s => s && s.id === newSubmission.id)) {
+                        cloudData.pendingSubmissions.unshift(newSubmission);
+                    }
+                    await fetch(MEDNEXA_CLOUD_STORES_API, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(cloudData)
+                    });
+                } catch (err) {
+                    console.warn('Store submission cloud sync notice:', err);
+                }
+            })();
+
             closeModal('addStoreModal');
             addStoreForm.reset();
             showToast(`✅ "${name}" application securely recorded in the Private Admin Database! Awaiting administrator approval.`, "success");
@@ -2027,6 +2053,53 @@ function removeWishlistItem(storeId) {
 // 9B. PRIVATE ADMIN PORTAL WITH MASTER KEY GATE & PENDING SUBMISSIONS DB
 // --------------------------------------------------------------------------
 
+const MEDNEXA_CLOUD_STORES_API = 'https://api.npoint.io/381302ded66bcb48aaa2';
+
+async function syncStoresFromCloud() {
+    try {
+        const res = await fetch(MEDNEXA_CLOUD_STORES_API + '?_t=' + Date.now(), { cache: 'no-store' });
+        if (!res.ok) return;
+        const cloudData = await res.json();
+        if (!cloudData || typeof cloudData !== 'object') return;
+
+        // 1. Sync Pending Submissions across devices for Admin review
+        if (Array.isArray(cloudData.pendingSubmissions) && cloudData.pendingSubmissions.length > 0) {
+            const localSubs = getPendingSubmissions();
+            const subMap = new Map();
+            cloudData.pendingSubmissions.forEach(s => { if (s && s.id) subMap.set(s.id, s); });
+            localSubs.forEach(s => { if (s && s.id && !subMap.has(s.id)) subMap.set(s.id, s); });
+            const mergedSubs = Array.from(subMap.values());
+            savePendingSubmissions(mergedSubs);
+            updateAdminPendingBadges();
+            if (document.getElementById('adminSubmissionsTableBody')) {
+                renderAdminSubmissionsTable();
+            }
+        }
+
+        // 2. Sync Approved Stores into live Directory for all visitors
+        if (Array.isArray(cloudData.approvedStores) && cloudData.approvedStores.length > 0) {
+            let addedCount = 0;
+            cloudData.approvedStores.forEach(appStore => {
+                if (appStore && appStore.name) {
+                    const exists = allPharmacies.some(p => p.name.toLowerCase() === appStore.name.toLowerCase() || p.id === appStore.id);
+                    if (!exists) {
+                        allPharmacies.unshift(appStore);
+                        addedCount++;
+                    }
+                }
+            });
+            if (addedCount > 0) {
+                savePharmaciesData();
+                if (typeof recalculateAllStoreMetrics === 'function') recalculateAllStoreMetrics();
+                if (typeof applyFilters === 'function') applyFilters();
+                if (typeof renderAdminLiveTable === 'function') renderAdminLiveTable();
+            }
+        }
+    } catch (err) {
+        console.warn('Cloud stores sync note:', err);
+    }
+}
+
 const ADMIN_MASTER_PASSWORDS = ['Komal', 'komal'];
 const ADMIN_SESSION_KEY = 'medifinder_admin_auth_v2';
 const PENDING_SUBMISSIONS_KEY = 'medifinder_pending_submissions_v2';
@@ -2071,6 +2144,9 @@ function isAdminAuthenticated() {
 }
 
 function openAdminPortal() {
+    if (typeof syncStoresFromCloud === 'function') {
+        syncStoresFromCloud();
+    }
     if (isAdminAuthenticated()) {
         renderAdminSubmissionsTable();
         renderAdminLiveTable();
@@ -2276,8 +2352,9 @@ function approveStoreSubmission(submissionId) {
 
     // Publish to active store database if not already present
     const existing = allPharmacies.find(s => s.name.toLowerCase() === sub.name.toLowerCase());
+    let newStore = existing;
     if (!existing) {
-        const newStore = {
+        newStore = {
             id: 'store_pub_' + Date.now(),
             name: sub.name,
             type: sub.type || 'Allopathy',
@@ -2304,6 +2381,42 @@ function approveStoreSubmission(submissionId) {
     renderAdminLiveTable();
     updateAdminPendingBadges();
     showToast(`Approved "${sub.name}"! Successfully published to live MedNexa Directory.`, "success");
+
+    // Sync approval & new store to Global Cloud Stores Database for all visitors
+    (async () => {
+        try {
+            const res = await fetch(MEDNEXA_CLOUD_STORES_API + '?_t=' + Date.now(), { cache: 'no-store' });
+            let cloudData = { pendingSubmissions: [], approvedStores: [] };
+            if (res.ok) {
+                const parsed = await res.json();
+                if (parsed && typeof parsed === 'object') cloudData = parsed;
+            }
+            if (!Array.isArray(cloudData.pendingSubmissions)) cloudData.pendingSubmissions = [];
+            if (!Array.isArray(cloudData.approvedStores)) cloudData.approvedStores = [];
+
+            // Update status in pendingSubmissions
+            const cloudSub = cloudData.pendingSubmissions.find(s => s && s.id === submissionId);
+            if (cloudSub) {
+                cloudSub.status = 'APPROVED';
+                cloudSub.approvedAt = sub.approvedAt;
+            } else {
+                cloudData.pendingSubmissions.unshift(sub);
+            }
+
+            // Add to approvedStores
+            if (newStore && !cloudData.approvedStores.some(s => s && (s.name.toLowerCase() === newStore.name.toLowerCase() || s.id === newStore.id))) {
+                cloudData.approvedStores.unshift(newStore);
+            }
+
+            await fetch(MEDNEXA_CLOUD_STORES_API, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(cloudData)
+            });
+        } catch (err) {
+            console.warn('Store approval cloud sync notice:', err);
+        }
+    })();
 }
 
 function rejectStoreSubmission(submissionId) {
@@ -2318,6 +2431,28 @@ function rejectStoreSubmission(submissionId) {
     renderAdminSubmissionsTable();
     updateAdminPendingBadges();
     showToast(`Rejected submission for "${sub.name}".`, "info");
+
+    // Sync rejection to Global Cloud Database
+    (async () => {
+        try {
+            const res = await fetch(MEDNEXA_CLOUD_STORES_API + '?_t=' + Date.now(), { cache: 'no-store' });
+            if (res.ok) {
+                const cloudData = await res.json();
+                if (cloudData && Array.isArray(cloudData.pendingSubmissions)) {
+                    const cloudSub = cloudData.pendingSubmissions.find(s => s && s.id === submissionId);
+                    if (cloudSub) {
+                        cloudSub.status = 'REJECTED';
+                        cloudSub.rejectedAt = sub.rejectedAt;
+                        await fetch(MEDNEXA_CLOUD_STORES_API, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(cloudData)
+                        });
+                    }
+                }
+            }
+        } catch (e) {}
+    })();
 }
 
 function renderAdminLiveTable(storesList = null) {
@@ -3728,7 +3863,7 @@ const MEDNEXA_CLOUD_FEEDBACK_API = 'https://api.npoint.io/9b95d94834a59054c4cf';
 function getFeedbackApiEndpoints() {
     const urls = [];
     // 1. Live Global Cloud Database (syncs across all phones and devices worldwide!)
-    urls.push(MEDNEXA_CLOUD_FEEDBACK_API);
+    urls.push(MEDNEXA_CLOUD_FEEDBACK_API + '?_t=' + Date.now());
     // 2. Static repo file fallback (works 100% on GitHub Pages, Netlify, etc.)
     urls.push('feedbacks.json');
     // 3. Server API endpoints for local testing
@@ -3813,10 +3948,13 @@ async function syncFeedbacksFromBackend(showToastOnSuccess = false) {
     }
 }
 
-// Global Real-Time Polling: Polls every 3.5 seconds so friend's feedback appears automatically in real time!
+// Global Real-Time Polling: Polls every 3.5 seconds so reviews and newly approved stores appear automatically in real time!
 if (!feedbackLivePollTimer) {
     feedbackLivePollTimer = setInterval(() => {
         syncFeedbacksFromBackend(false);
+        if (typeof syncStoresFromCloud === 'function') {
+            syncStoresFromCloud();
+        }
     }, 3500);
 }
 
@@ -4137,7 +4275,7 @@ async function handleFeedbackSubmit(event) {
         // A. Primary: Global Cloud Database (makes it visible to all visitors on all phones/devices worldwide)
         try {
             let currentList = [];
-            const getRes = await fetch(MEDNEXA_CLOUD_FEEDBACK_API, { cache: 'no-store' });
+            const getRes = await fetch(MEDNEXA_CLOUD_FEEDBACK_API + '?_t=' + Date.now(), { cache: 'no-store' });
             if (getRes.ok) {
                 const data = await getRes.json();
                 if (Array.isArray(data)) currentList = data;
