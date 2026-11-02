@@ -3723,14 +3723,18 @@ function saveStoredFeedbacks(list) {
     }
 }
 
+const MEDNEXA_CLOUD_FEEDBACK_API = 'https://api.npoint.io/9b95d94834a59054c4cf';
+
 function getFeedbackApiEndpoints() {
     const urls = [];
-    // 1. Static repo file fallback (works 100% on GitHub Pages, Netlify, etc.)
+    // 1. Live Global Cloud Database (syncs across all phones and devices worldwide!)
+    urls.push(MEDNEXA_CLOUD_FEEDBACK_API);
+    // 2. Static repo file fallback (works 100% on GitHub Pages, Netlify, etc.)
     urls.push('feedbacks.json');
-    // 2. Server API endpoints
+    // 3. Server API endpoints for local testing
     urls.push('/api/feedbacks');
     urls.push('/api/feedback');
-    // 3. Localhost server only if running locally or file:// (avoid Mixed Content on HTTPS)
+    // 4. Localhost server only if running locally or file:// (avoid Mixed Content on HTTPS)
     if (window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
         urls.push('http://localhost:8080/api/feedbacks');
         urls.push('http://127.0.0.1:8080/api/feedbacks');
@@ -4128,10 +4132,34 @@ async function handleFeedbackSubmit(event) {
     const feedEl = document.getElementById('publicFeedbackList');
     if (feedEl) feedEl.scrollTop = 0;
 
-    // 4. Send to Server Backend asynchronously in background (non-blocking)
-    const endpoints = getFeedbackApiEndpoints().filter(u => u.includes('/api/'));
+    // 4. Send to Global Cloud Database & Server Backend asynchronously in background (non-blocking)
     (async () => {
-        for (const url of endpoints) {
+        // A. Primary: Global Cloud Database (makes it visible to all visitors on all phones/devices worldwide)
+        try {
+            let currentList = [];
+            const getRes = await fetch(MEDNEXA_CLOUD_FEEDBACK_API, { cache: 'no-store' });
+            if (getRes.ok) {
+                const data = await getRes.json();
+                if (Array.isArray(data)) currentList = data;
+            }
+
+            // Ensure our new feedback is in the cloud list
+            if (!currentList.some(f => f && f.id === newFeedback.id)) {
+                currentList.unshift(newFeedback);
+            }
+
+            await fetch(MEDNEXA_CLOUD_FEEDBACK_API, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(currentList)
+            });
+        } catch (cloudErr) {
+            console.warn('Live cloud feedback sync notice:', cloudErr);
+        }
+
+        // B. Secondary: Local server endpoint fallback if running server.py
+        const localEndpoints = getFeedbackApiEndpoints().filter(u => u.includes('/api/feedbacks') || u.includes('/api/feedback'));
+        for (const url of localEndpoints) {
             try {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 2000);
@@ -4253,8 +4281,17 @@ async function deleteFeedback(id) {
         try { feedbackBroadcast.postMessage({ type: 'FEEDBACKS_UPDATED', feedbacks: feedbacks }); } catch (e) {}
     }
 
+    // Sync update to Cloud Database
+    try {
+        await fetch(MEDNEXA_CLOUD_FEEDBACK_API, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(feedbacks)
+        });
+    } catch (e) {}
+
     // Call DELETE on server
-    const endpoints = getFeedbackApiEndpoints();
+    const endpoints = getFeedbackApiEndpoints().filter(u => u.includes('/api/'));
     for (const url of endpoints) {
         try {
             await fetch(`${url}?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
@@ -4276,8 +4313,17 @@ async function clearAllFeedbacks() {
         try { feedbackBroadcast.postMessage({ type: 'FEEDBACKS_UPDATED', feedbacks: [] }); } catch (e) {}
     }
 
+    // Sync clear to Cloud Database
+    try {
+        await fetch(MEDNEXA_CLOUD_FEEDBACK_API, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify([])
+        });
+    } catch (e) {}
+
     // Call DELETE on server
-    const endpoints = getFeedbackApiEndpoints();
+    const endpoints = getFeedbackApiEndpoints().filter(u => u.includes('/api/'));
     for (const url of endpoints) {
         try {
             await fetch(`${url}?clear=all`, { method: 'DELETE' });
