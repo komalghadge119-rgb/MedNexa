@@ -3791,7 +3791,11 @@ try {
     };
 } catch (e) {}
 
-const LEGACY_SAMPLE_FEEDBACK_IDS = ['fb-1730501001', 'fb-1730501002', 'fb-1730501003', 'fb-1730501004', 'fb-101', 'fb-102', 'fb-103'];
+const LEGACY_SAMPLE_FEEDBACK_IDS = [
+    'fb-1730501001', 'fb-1730501002', 'fb-1730501003', 'fb-1730501004',
+    'fb-101', 'fb-102', 'fb-103',
+    'test-iphone', 'fb-test', 'fb-test-1', 'fb-test-item'
+];
 
 function getStoredFeedbacks() {
     try {
