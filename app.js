@@ -619,24 +619,8 @@ function toggleSimulateMovement() {
 }
 
 function setDistanceRadiusFilter(radiusKm) {
-    maxDistanceRadiusKm = radiusKm;
-    document.querySelectorAll('.dist-pill').forEach(p => p.classList.remove('active'));
-
-    let pillId = 'dist-pill-0';
-    if (radiusKm === 1.0) pillId = 'dist-pill-1';
-    else if (radiusKm === 2.5) pillId = 'dist-pill-2-5';
-    else if (radiusKm === 5.0) pillId = 'dist-pill-5';
-
-    const activePill = document.getElementById(pillId);
-    if (activePill) activePill.classList.add('active');
-
+    maxDistanceRadiusKm = 0;
     applyFilters();
-
-    if (radiusKm > 0) {
-        showToast(`Filtered: Showing pharmacies within ${radiusKm} km road distance.`, "info");
-    } else {
-        showToast("Showing pharmacies across all distances.", "info");
-    }
 }
 
 function drawLiveRouteToStore(storeId) {
@@ -817,10 +801,7 @@ function applyFilters() {
         // Discount Filter (e.g. 50% discount on medicines)
         const matchDiscount = !minDiscountFilter || (store.genericSavingsPct >= minDiscountFilter);
 
-        // Max Distance Radius Filter
-        const matchDistanceRadius = !maxDistanceRadiusKm || (store.roadDistanceKm <= maxDistanceRadiusKm);
-
-        return matchArea && matchType && matchSearch && matchDiscount && matchDistanceRadius;
+        return matchArea && matchType && matchSearch && matchDiscount;
     });
 
     // Real-Time Sort: Closest Road Distance first!
@@ -845,7 +826,7 @@ function renderCards(stores) {
             <div class="empty-state">
                 <i class="fas fa-kit-medical"></i>
                 <h3>No Medical Stores Found</h3>
-                <p>Try searching for a different area or expanding the distance radius filter.</p>
+                <p>Try searching for a different area or resetting your filters.</p>
                 <button onclick="resetFilters()" class="btn-primary" style="margin-top:14px;">
                     <i class="fas fa-rotate-left"></i> Reset All Filters
                 </button>
